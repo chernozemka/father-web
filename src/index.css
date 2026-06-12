@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/* Make the dark: variant respond to a .dark class instead of the OS setting,
+   so the toggle can control it. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Light theme (default) */
+html {
+  --page-bg: #f4f4f5;
+  background-color: var(--page-bg);
+  color-scheme: light;
+}
+
+/* Dark theme */
+html.dark {
+  --page-bg: #0e0e11;
+  color-scheme: dark;
+}
+
+/* Infinite marquee: track holds two copies of the row, so shifting it
+   left by exactly half its width loops seamlessly. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Skill info card pop-in (like flipping up a game card). */
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-pop {
+  animation: pop 0.16s ease-out;
+}
+
+/* Fade the row in/out at the container edges. */
+.marquee-mask {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+}
