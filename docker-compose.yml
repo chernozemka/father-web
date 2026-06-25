@@ -1,6 +1,6 @@
 services:
   web:
-    build: ./web
+    build: .
     image: father-web
     container_name: father-web
     ports:
