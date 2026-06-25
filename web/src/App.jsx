@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-// --- Edit these with the real details ---
-const profile = {
+// Site content, hardcoded here (no backend).
+const PROFILE = {
   name: 'Viacheslav Marchenko',
   role: 'Software Engineer',
 }
 
-const links = [
+const LINKS = [
   { label: 'Email', href: 'mailto:you@example.com' },
   { label: 'GitHub', href: 'https://github.com/yourname' },
   { label: 'GitLab', href: 'https://gitlab.com/yourname' },
@@ -15,7 +15,7 @@ const links = [
 ]
 
 // Each skill carries its own experience + completed-project count.
-const skills = [
+const SKILLS = [
   { name: 'C#', years: 5, projects: 14, note: 'Backend services and desktop apps.' },
   { name: 'C++', years: 4, projects: 9, note: 'Performance-critical systems code.' },
   { name: 'Go', years: 3, projects: 7, note: 'Microservices and CLI tooling.' },
@@ -93,6 +93,11 @@ function App() {
   const [theme, setTheme] = useState('dark')
   const [rotation, setRotation] = useState(0)
 
+  // Card content is hardcoded above.
+  const profile = PROFILE
+  const links = LINKS
+  const skills = SKILLS
+
   // selected = { ...skill, rgb, x, y } where x/y anchor the info card.
   const [selected, setSelected] = useState(null)
   const infoRef = useRef(null)
@@ -114,7 +119,7 @@ function App() {
         ...skill,
         rgb: `${randomChannel()} ${randomChannel()} ${randomChannel()}`,
       })),
-    [],
+    [skills],
   )
 
   // Open the info card anchored just above the clicked skill.

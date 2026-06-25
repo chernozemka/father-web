@@ -6,4 +6,5 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   root: '.',
   plugins: [react(), tailwindcss()],
+  base: '/father-web/',
 })
