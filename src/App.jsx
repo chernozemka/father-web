@@ -15,16 +15,18 @@ const LINKS = [
 ]
 
 // Each skill carries its own experience + completed-project count.
+// `icon` is a Font Awesome brand class. Only Python/PHP/Java/JS have real brand
+// glyphs; the rest have no dedicated icon, so they fall back to their text name.
 const SKILLS = [
-  { name: 'C#', years: 5, projects: 14, note: 'Backend services and desktop apps.' },
-  { name: 'C++', years: 4, projects: 9, note: 'Performance-critical systems code.' },
-  { name: 'Go', years: 3, projects: 7, note: 'Microservices and CLI tooling.' },
-  { name: 'Python', years: 6, projects: 20, note: 'Automation, data, and web APIs.' },
-  { name: 'PHP', years: 4, projects: 11, note: 'Web applications and APIs.' },
-  { name: '.NET', years: 5, projects: 13, note: 'Enterprise web and services.' },
-  { name: 'Java', years: 4, projects: 10, note: 'Backend and Android work.' },
-  { name: 'JavaScript', years: 6, projects: 18, note: 'Frontend and Node.js.' },
-  { name: 'SQL', years: 6, projects: 22, note: 'Schema design and query tuning.' },
+  { name: 'C#', icon: null, years: 5, projects: 14, note: 'Backend services and desktop apps.' },
+  { name: 'C++', icon: null, years: 4, projects: 9, note: 'Performance-critical systems code.' },
+  { name: 'Go', icon: null, years: 3, projects: 7, note: 'Microservices and CLI tooling.' },
+  { name: 'Python', icon: 'fa-brands fa-python', years: 6, projects: 20, note: 'Automation, data, and web APIs.' },
+  { name: 'PHP', icon: 'fa-brands fa-php', years: 4, projects: 11, note: 'Web applications and APIs.' },
+  { name: '.NET', icon: null, years: 5, projects: 13, note: 'Enterprise web and services.' },
+  { name: 'Java', icon: 'fa-brands fa-java', years: 4, projects: 10, note: 'Backend and Android work.' },
+  { name: 'JavaScript', icon: 'fa-brands fa-square-js', years: 6, projects: 18, note: 'Frontend and Node.js.' },
+  { name: 'SQL', icon: null, years: 6, projects: 22, note: 'Schema design and query tuning.' },
 ]
 
 const CARD_HALF_WIDTH = 112 // half of w-56 (224px), used to clamp on-screen
@@ -68,7 +70,6 @@ function MoonIcon() {
   )
 }
 
-// Self-contained live clock so only this subtree re-renders each second.
 function Clock() {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
@@ -76,17 +77,23 @@ function Clock() {
     return () => clearInterval(id)
   }, [])
 
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
   const datetime = now.toLocaleString('en-GB', {
-    timeZone: 'Europe/Prague',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
+    timeZoneName: 'short',
   })
 
-  return <footer className="text-sm text-gray-500">{datetime}</footer>
+  return (
+    <footer className="text-sm text-gray-500" title={timeZone}>
+      {datetime}
+    </footer>
+  )
 }
 
 function App() {
@@ -202,14 +209,22 @@ function App() {
               <button
                 key={`${skill.name}-${i}`}
                 onClick={(e) => openCard(skill, e)}
-                className="shrink-0 cursor-pointer rounded-2xl border px-8 py-5 text-lg font-semibold transition-transform hover:scale-105"
+                title={skill.name}
+                aria-label={skill.name}
+                className={`flex h-16 shrink-0 cursor-pointer items-center justify-center rounded-2xl border transition-transform hover:scale-105 ${
+                  skill.icon ? 'w-16 text-2xl' : 'px-8 text-lg font-semibold'
+                }`}
                 style={{
                   borderColor: `rgb(${skill.rgb})`,
                   backgroundColor: `rgb(${skill.rgb} / 0.12)`,
                   color: `rgb(${skill.rgb})`,
                 }}
               >
-                {skill.name}
+                {skill.icon ? (
+                  <i className={skill.icon} aria-hidden="true" />
+                ) : (
+                  skill.name
+                )}
               </button>
             ))}
           </div>
@@ -239,17 +254,37 @@ function App() {
               style={{ color: `rgb(${selected.rgb})` }}
             >
               <span>{selected.name}</span>
-              <span>◆</span>
+              {selected.icon ? (
+                <i className={selected.icon} aria-hidden="true" />
+              ) : (
+                <span>◆</span>
+              )}
             </div>
 
             {/* Center face */}
             <div className="flex flex-1 flex-col items-center justify-center gap-4">
-              <div
-                className="text-3xl font-bold"
-                style={{ color: `rgb(${selected.rgb})` }}
-              >
-                {selected.name}
-              </div>
+              {selected.icon ? (
+                <div className="flex flex-col items-center gap-1">
+                  <i
+                    className={`${selected.icon} text-5xl`}
+                    style={{ color: `rgb(${selected.rgb})` }}
+                    aria-hidden="true"
+                  />
+                  <span
+                    className="text-sm font-bold"
+                    style={{ color: `rgb(${selected.rgb})` }}
+                  >
+                    {selected.name}
+                  </span>
+                </div>
+              ) : (
+                <div
+                  className="text-3xl font-bold"
+                  style={{ color: `rgb(${selected.rgb})` }}
+                >
+                  {selected.name}
+                </div>
+              )}
               <div className="space-y-1 text-center">
                 <div className="text-sm text-gray-600 dark:text-gray-300">
                   <span className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -277,7 +312,11 @@ function App() {
               style={{ color: `rgb(${selected.rgb})` }}
             >
               <span>{selected.name}</span>
-              <span>◆</span>
+              {selected.icon ? (
+                <i className={selected.icon} aria-hidden="true" />
+              ) : (
+                <span>◆</span>
+              )}
             </div>
           </div>
         </div>
