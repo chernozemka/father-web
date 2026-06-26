@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { track } from './analytics.js'
 
 // Site content, hardcoded here (no backend).
 const PROFILE = {
@@ -30,6 +31,11 @@ const SKILLS = [
 ]
 
 const CARD_HALF_WIDTH = 112 // half of w-56 (224px), used to clamp on-screen
+
+// Pick a theme from the visitor's local hour: light 05:00–20:00, dark otherwise.
+function themeForHour(hour) {
+  return hour >= 5 && hour < 20 ? 'light' : 'dark'
+}
 
 // Mid-tone channel (90–199) stays legible on both light and dark backgrounds.
 function randomChannel() {
@@ -97,7 +103,9 @@ function Clock() {
 }
 
 function App() {
-  const [theme, setTheme] = useState('dark')
+  // Default to the theme matching the visitor's local time of day; the sun/moon
+  // button still lets them override it manually for the session.
+  const [theme, setTheme] = useState(() => themeForHour(new Date().getHours()))
   const [rotation, setRotation] = useState(0)
 
   // Card content is hardcoded above.
@@ -107,7 +115,39 @@ function App() {
 
   // selected = { ...skill, rgb, x, y } where x/y anchor the info card.
   const [selected, setSelected] = useState(null)
+  // While true, the card plays the pop-out animation before unmounting.
+  const [closing, setClosing] = useState(false)
+  // tilt = degrees the open card is rotated, driven by pointer position.
+  const [tilt, setTilt] = useState({ rx: 0, ry: 0 })
   const infoRef = useRef(null)
+  const closeTimer = useRef(null)
+
+  const CARD_ANIM_MS = 160 // keep in sync with the pop / pop-out CSS duration
+
+  // Play the reverse animation, then actually remove the card.
+  const closeCard = () => {
+    if (!selected || closing) return
+    setClosing(true)
+    closeTimer.current = setTimeout(() => {
+      setSelected(null)
+      setClosing(false)
+    }, CARD_ANIM_MS)
+  }
+
+  const MAX_TILT = 12 // degrees at the card's edges
+
+  // Rotate the card toward the corner the pointer is nearest.
+  const handleTilt = (e) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    const px = (e.clientX - r.left) / r.width // 0 (left) ... 1 (right)
+    const py = (e.clientY - r.top) / r.height // 0 (top) ... 1 (bottom)
+    setTilt({
+      rx: (0.5 - py) * 2 * MAX_TILT,
+      ry: (px - 0.5) * 2 * MAX_TILT,
+    })
+  }
+
+  const resetTilt = () => setTilt({ rx: 0, ry: 0 })
 
   // Reflect the theme onto <html> for the .dark class toggle + page background.
   useEffect(() => {
@@ -115,8 +155,12 @@ function App() {
   }, [theme])
 
   const toggleTheme = () => {
-    setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
-    setRotation((r) => r + 180)
+    setTheme((t) => {
+      const next = t === 'dark' ? 'light' : 'dark'
+      track(`theme-${next}`, `Theme switched to ${next}`)
+      return next
+    })
+    setRotation((r) => r + 360)
   }
 
   // Assign each skill a stable random color (recomputed only on reload).
@@ -131,12 +175,16 @@ function App() {
 
   // Open the info card anchored just above the clicked skill.
   const openCard = (skill, e) => {
+    clearTimeout(closeTimer.current) // cancel a pending close if mid-animation
+    setClosing(false)
     const rect = e.currentTarget.getBoundingClientRect()
     const x = Math.min(
       Math.max(rect.left + rect.width / 2, CARD_HALF_WIDTH + 8),
       window.innerWidth - CARD_HALF_WIDTH - 8,
     )
     setSelected({ ...skill, x, y: rect.top - 12 })
+    resetTilt() // start flat each time a card opens
+    track(`skill-open-${skill.name}`, `Opened ${skill.name} card`)
   }
 
   // Dismiss on outside click or Escape.
@@ -144,10 +192,10 @@ function App() {
     if (!selected) return
     const onDown = (e) => {
       if (infoRef.current && !infoRef.current.contains(e.target)) {
-        setSelected(null)
+        closeCard()
       }
     }
-    const onKey = (e) => e.key === 'Escape' && setSelected(null)
+    const onKey = (e) => e.key === 'Escape' && closeCard()
     document.addEventListener('mousedown', onDown)
     window.addEventListener('keydown', onKey)
     return () => {
@@ -189,6 +237,7 @@ function App() {
               href={link.href}
               target="_blank"
               rel="noreferrer"
+              onClick={() => track(`link-${link.label}`, `Clicked ${link.label}`)}
               className="rounded-full border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:border-gray-500 hover:text-black dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-400 dark:hover:text-white"
             >
               {link.label}
@@ -242,12 +291,23 @@ function App() {
             left: selected.x,
             top: selected.y,
             transform: 'translate(-50%, -100%)',
+            perspective: '700px',
           }}
         >
+          {/* Tilt layer: rotates with the pointer; the card's pop-in lives one
+              level deeper so the two transforms don't collide. */}
           <div
-            className="animate-pop flex aspect-[5/7] w-56 flex-col rounded-xl border-2 bg-white p-4 text-left shadow-2xl dark:bg-[#15151b]"
-            style={{ borderColor: `rgb(${selected.rgb})` }}
+            onMouseMove={handleTilt}
+            onMouseLeave={resetTilt}
+            style={{
+              transform: `rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
+              transition: 'transform 120ms ease-out',
+            }}
           >
+            <div
+              className={`${closing ? 'animate-pop-out' : 'animate-pop'} flex aspect-[5/7] w-56 flex-col rounded-xl border-2 bg-white p-4 text-left shadow-2xl dark:bg-[#15151b]`}
+              style={{ borderColor: `rgb(${selected.rgb})` }}
+            >
             {/* Top-left index, like a playing card */}
             <div
               className="flex items-center justify-between text-xs font-bold"
@@ -317,6 +377,7 @@ function App() {
               ) : (
                 <span>◆</span>
               )}
+            </div>
             </div>
           </div>
         </div>
